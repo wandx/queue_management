@@ -8,7 +8,7 @@ part of 'job_dto.dart';
 
 class JobDtoImplAdapter extends TypeAdapter<_$JobDtoImpl> {
   @override
-  final int typeId = 1922;
+  final int typeId = 101;
 
   @override
   _$JobDtoImpl read(BinaryReader reader) {

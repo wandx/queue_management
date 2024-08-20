@@ -138,7 +138,7 @@ class __$$JobDtoImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-@HiveType(typeId: 1922)
+@HiveType(typeId: 101)
 class _$JobDtoImpl extends _JobDto {
   _$JobDtoImpl(
       {@HiveField(0) required this.id,
