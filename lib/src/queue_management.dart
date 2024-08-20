@@ -63,11 +63,16 @@ class QueueManagement {
 }
 
 Future<void> _executeJob(List<dynamic> args) async {
-  final local = JobLocal();
   final port = args[0] as SendPort;
-  final job = args[1] as JobExecutionContract;
-  final jobId = args[2] as String;
-  await job.execute();
-  await local.markAsCompleted(jobId);
-  Isolate.exit(port);
+  try {
+    final local = JobLocal();
+
+    final job = args[1] as JobExecutionContract;
+    final jobId = args[2] as String;
+    await job.execute();
+    await local.markAsCompleted(jobId);
+    Isolate.exit(port);
+  } catch (e) {
+    Isolate.exit(port);
+  }
 }

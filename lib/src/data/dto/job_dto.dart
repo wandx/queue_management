@@ -10,7 +10,7 @@ part 'job_dto.g.dart';
 /// {@endtemplate}
 @freezed
 class JobDto extends HiveObject with _$JobDto {
-  @HiveType(typeId: 1922)
+  @HiveType(typeId: 101)
   factory JobDto({
     @HiveField(0) required String id,
     @HiveField(1) required String name,
