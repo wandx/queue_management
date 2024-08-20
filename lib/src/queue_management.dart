@@ -1,8 +1,9 @@
 import 'dart:isolate';
 
+import 'package:hive/hive.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:queue_management/queue_management.dart';
 import 'package:queue_management/src/data/sources/local/job_local.dart';
-import 'package:queue_management/src/domain/contracts/job_execution_contract.dart';
-import 'package:queue_management/src/domain/entities/job.dart';
 
 /// {@template queue_management}
 /// A Very Good Project created by Very Good CLI.
@@ -14,6 +15,13 @@ class QueueManagement {
   static final instance = QueueManagement._();
 
   List<JobExecutionContract> jobs = [];
+
+  Future<void> initialize() async {
+    final path = await getApplicationDocumentsDirectory();
+    Hive
+      ..init('${path.path}/hive')
+      ..registerAdapter(JobDtoImplAdapter());
+  }
 
   Future<void> addJobQueue(String name, Map<String, dynamic> payload) async {
     final local = JobLocal();
@@ -40,6 +48,7 @@ class QueueManagement {
     if (jobs.isEmpty) return;
     final local = JobLocal();
     final allPendingJobs = await local.browsePending();
+    final dir = await getApplicationDocumentsDirectory();
 
     if (allPendingJobs.isEmpty) return;
 
@@ -49,13 +58,24 @@ class QueueManagement {
           try {
             final receivePort = ReceivePort();
             job.payload = pendingJob.payload;
+            print('syncing');
             await Isolate.spawn(
               _executeJob,
-              [receivePort.sendPort, job, pendingJob.id],
+              [
+                receivePort.sendPort,
+                job,
+              ],
               onError: receivePort.sendPort,
               onExit: receivePort.sendPort,
-            );
-          } catch (e) {}
+            ).then((e) {
+              e.errors.listen((e) {
+                print(e.toString());
+              });
+            });
+            await local.markAsCompleted(pendingJob.id);
+          } catch (e) {
+            print(e.toString());
+          }
         }
       }
     }
@@ -65,14 +85,13 @@ class QueueManagement {
 Future<void> _executeJob(List<dynamic> args) async {
   final port = args[0] as SendPort;
   try {
-    final local = JobLocal();
-
     final job = args[1] as JobExecutionContract;
-    final jobId = args[2] as String;
     await job.execute();
-    await local.markAsCompleted(jobId);
     Isolate.exit(port);
-  } catch (e) {
+  } catch (e, s) {
+    print('JOB Execution Error');
+    print(e.toString());
+    print(s.toString());
     Isolate.exit(port);
   }
 }
