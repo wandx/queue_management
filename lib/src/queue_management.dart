@@ -1,11 +1,62 @@
+import 'dart:async';
 import 'dart:isolate';
 
+import 'package:equatable/equatable.dart';
 import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:queue_management/queue_management.dart';
 import 'package:queue_management/src/data/sources/local/job_local.dart';
 
-/// {@template queue_management}
+enum QueueStatus {
+  idle,
+  running,
+  completed,
+  completedWithError,
+}
+
+class QueueStatusEntity extends Equatable {
+  QueueStatusEntity({
+    required this.status,
+    required this.completed,
+  });
+
+  factory QueueStatusEntity.running() {
+    return QueueStatusEntity(
+      status: QueueStatus.running,
+      completed: [],
+    );
+  }
+
+  factory QueueStatusEntity.completed(List<String> ids) {
+    return QueueStatusEntity(
+      status: QueueStatus.completed,
+      completed: ids,
+    );
+  }
+
+  factory QueueStatusEntity.completedWithError() {
+    return QueueStatusEntity(
+      status: QueueStatus.completedWithError,
+      completed: [],
+    );
+  }
+
+  final QueueStatus status;
+  final List<String> completed;
+
+  @override
+  // TODO: implement props
+  List<Object?> get props => [
+        status,
+        completed,
+      ];
+}
+
+final queueStatusController = StreamController<QueueStatusEntity>.broadcast();
+
+final
+
+    /// {@template queue_management}
 /// A Very Good Project created by Very Good CLI.
 /// {@endtemplate}
 class QueueManagement {
@@ -52,6 +103,10 @@ class QueueManagement {
 
     if (allPendingJobs.isEmpty) return;
 
+    queueStatusController.sink.add(QueueStatusEntity.running());
+
+    final completedIds = <String>[];
+    final errorIds = <String>[];
     for (final pendingJob in allPendingJobs) {
       for (final job in jobs) {
         if (job.name == pendingJob.name) {
@@ -72,12 +127,23 @@ class QueueManagement {
                 print(e.toString());
               });
             });
-            await local.markAsCompleted(pendingJob.id);
+
+            completedIds.add(pendingJob.id);
           } catch (e) {
+            errorIds.add(pendingJob.id);
             print(e.toString());
           }
         }
       }
+    }
+
+    if (completedIds.isNotEmpty && errorIds.isEmpty) {
+      for (final id in completedIds) {
+        await local.markAsCompleted(id);
+      }
+      queueStatusController.sink.add(QueueStatusEntity.completed(completedIds));
+    } else {
+      queueStatusController.sink.add(QueueStatusEntity.completedWithError());
     }
   }
 }
