@@ -148,12 +148,13 @@ class QueueManagement {
   }
 }
 
-Future<void> _executeJob(List<dynamic> args) async {
+void _executeJob(List<dynamic> args) {
   final port = args[0] as SendPort;
   try {
     final job = args[1] as JobExecutionContract;
-    await job.execute();
-    Isolate.exit(port);
+    job.execute().then((e) {
+      Isolate.exit(port);
+    });
   } catch (e, s) {
     print('JOB Execution Error');
     print(e.toString());
