@@ -95,6 +95,11 @@ class QueueManagement {
     await local.clearAll();
   }
 
+  Future<void> markAsCompleted(String id) async {
+    final local = JobLocal();
+    await local.markAsCompleted(id);
+  }
+
   Future<void> run() async {
     if (jobs.isEmpty) return;
     final local = JobLocal();
